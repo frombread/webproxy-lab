@@ -748,9 +748,9 @@ void V(sem_t *sem)
 /* $begin rio_readn */
 ssize_t rio_readn(int fd, void *usrbuf, size_t n) 
 {
-    size_t nleft = n;
-    ssize_t nread;
-    char *bufp = usrbuf;
+    size_t nleft = n; // 읽어야 할 남은 바이트 수를 나타낸다.
+    ssize_t nread; // 실제로 읽은 바이트 수를 저장
+    char *bufp = usrbuf; // usrbuf의 위치
 
     while (nleft > 0) {
 	if ((nread = read(fd, bufp, nleft)) < 0) {
@@ -764,7 +764,7 @@ ssize_t rio_readn(int fd, void *usrbuf, size_t n)
 	nleft -= nread;
 	bufp += nread;
     }
-    return (n - nleft);         /* Return >= 0 */
+    return (n - nleft);         /* Return >= 0 */ //실제로 읽은 바이트 수를 나타낸다.
 }
 /* $end rio_readn */
 
@@ -772,11 +772,14 @@ ssize_t rio_readn(int fd, void *usrbuf, size_t n)
  * rio_writen - Robustly write n bytes (unbuffered)
  */
 /* $begin rio_writen */
+
+
+/* 네트워크나 파일에 데이터를 쓰는 작업, 오류처리 및 쓰기 작업의 완료 여부를 확인.*/
 ssize_t rio_writen(int fd, void *usrbuf, size_t n) 
 {
-    size_t nleft = n;
-    ssize_t nwritten;
-    char *bufp = usrbuf;
+    size_t nleft = n; //아직 남은 바이트 수를 나타낸다.
+    ssize_t nwritten; // 실제로 쓴 바이트 수를 저장한다.
+    char *bufp = usrbuf; // 현재쓰고 잇는 usrbuf의 위치를 나타낸다.
 
     while (nleft > 0) {
 	if ((nwritten = write(fd, bufp, nleft)) <= 0) {
@@ -785,8 +788,8 @@ ssize_t rio_writen(int fd, void *usrbuf, size_t n)
 	    else
 		return -1;       /* errno set by write() */
 	}
-	nleft -= nwritten;
-	bufp += nwritten;
+	nleft -= nwritten; // 쓰니까 차감해야지
+	bufp += nwritten; // 현재 위치가 바뀌니까 바꿔줌
     }
     return n;
 }
@@ -804,10 +807,10 @@ ssize_t rio_writen(int fd, void *usrbuf, size_t n)
 /* $begin rio_read */
 static ssize_t rio_read(rio_t *rp, char *usrbuf, size_t n)
 {
-    int cnt;
+    int cnt; // 이변수는 실제 읽을 바이트 수를 저장할 것 입니다.
 
     while (rp->rio_cnt <= 0) {  /* Refill if buf is empty */
-	rp->rio_cnt = read(rp->rio_fd, rp->rio_buf, 
+	rp->rio_cnt = read(rp->rio_fd, rp->rio_buf,  
 			   sizeof(rp->rio_buf));
 	if (rp->rio_cnt < 0) {
 	    if (errno != EINTR) /* Interrupted by sig handler return */
@@ -816,12 +819,12 @@ static ssize_t rio_read(rio_t *rp, char *usrbuf, size_t n)
 	else if (rp->rio_cnt == 0)  /* EOF */
 	    return 0;
 	else 
-	    rp->rio_bufptr = rp->rio_buf; /* Reset buffer ptr */
+	    rp->rio_bufptr = rp->rio_buf;  // /* Reset buffer ptr */
     }
 
     /* Copy min(n, rp->rio_cnt) bytes from internal buf to user buf */
-    cnt = n;          
-    if (rp->rio_cnt < n)   
+    cnt = n;
+    if (rp->rio_cnt < n)
 	cnt = rp->rio_cnt;
     memcpy(usrbuf, rp->rio_bufptr, cnt);
     rp->rio_bufptr += cnt;
@@ -846,11 +849,13 @@ void rio_readinitb(rio_t *rp, int fd)
  * rio_readnb - Robustly read n bytes (buffered)
  */
 /* $begin rio_readnb */
+
+/* 버퍼에 쌓인 데이터를 모두 읽기 위해 사용 됨.*/
 ssize_t rio_readnb(rio_t *rp, void *usrbuf, size_t n) 
 {
-    size_t nleft = n;
-    ssize_t nread;
-    char *bufp = usrbuf;
+    size_t nleft = n; //아직 읽어야 할 남은 바이트 수를 나타낸다.
+    ssize_t nread; //rio_read로부터 반환된 실제로 읽은 바이트 수를 저장
+    char *bufp = usrbuf; // 현재 읽고 있는 usrbuf 위치
     
     while (nleft > 0) {
 	if ((nread = rio_read(rp, bufp, nleft)) < 0) 
@@ -867,15 +872,19 @@ ssize_t rio_readnb(rio_t *rp, void *usrbuf, size_t n)
 /* 
  * rio_readlineb - Robustly read a text line (buffered)
  */
+
+
+
 /* $begin rio_readlineb */
+/*주로 텍스트 파일에서 한줄씩 데이터를 읽어오는 작업에 사용*/
 ssize_t rio_readlineb(rio_t *rp, void *usrbuf, size_t maxlen) 
 {
-    int n, rc;
-    char c, *bufp = usrbuf;
+    int n, rc; // n은 현재 까지 읽은 바이트 수를 나타냄, rc 변수는 rio_read 함수로부터 반환된 읽은 바이트수를 저장
+    char c, *bufp = usrbuf; // c는 usrbuf의 주소로 초기화, 현재 읽고 잇는 문자를 나타낸다.
 
     for (n = 1; n < maxlen; n++) { 
         if ((rc = rio_read(rp, &c, 1)) == 1) {
-	    *bufp++ = c;
+	    *bufp++ = c; //c를 *bufp에 저장하고, bufp를 증가시킴
 	    if (c == '\n') {
                 n++;
      		break;
@@ -898,16 +907,16 @@ ssize_t rio_readlineb(rio_t *rp, void *usrbuf, size_t maxlen)
  **********************************/
 ssize_t Rio_readn(int fd, void *ptr, size_t nbytes) 
 {
-    ssize_t n;
+    ssize_t n; // 실제 읽은 바이트 수를 저장할 것입니다.
   
-    if ((n = rio_readn(fd, ptr, nbytes)) < 0)
-	unix_error("Rio_readn error");
+    if ((n = rio_readn(fd, ptr, nbytes)) < 0) // 파일 디스크립터에서 읽어와서 nbytes 만큼 데이터를 읽어온다 ptr이 가리키는 메모리 영역에 저장
+	unix_error("Rio_readn error");//근데 그게 음수면 함수 실행, 오류메시지 출력
     return n;
 }
 
 void Rio_writen(int fd, void *usrbuf, size_t n) 
 {
-    if (rio_writen(fd, usrbuf, n) != n)
+    if (rio_writen(fd, usrbuf, n) != n) 
 	unix_error("Rio_writen error");
 }
 

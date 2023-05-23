@@ -4,7 +4,7 @@ int main(int argc, char **argv){
 
     int clientfd;
     char *host, *port,buf[MAXLINE];
-    rio_t rio; //뭔데 
+    rio_t rio; 
 
     if (argc != 3){ //명령행 인수의 개수가 3이 아닌 경우, 출력 -> 프로그램 종료
         fprintf(stderr, "usage: %s <host> <port> \n" ,argv[0]);

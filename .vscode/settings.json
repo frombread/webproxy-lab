@@ -2,7 +2,9 @@
     "files.associations": {
         "types.h": "c",
         "__config": "c",
-        "cstdio": "c"
+        "cstdio": "c",
+        "csapp.h": "c",
+        "cstring": "c"
     },
     "C_Cpp.errorSquiggles": "disabled"
 }
