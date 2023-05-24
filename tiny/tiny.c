@@ -54,20 +54,20 @@ void doit(int fd)
 
     /* Read request line and headers */
     Rio_readinitb(&rio, fd);
-    if (!Rio_readlineb(&rio, buf, MAXLINE))  //line:netp:doit:readrequest
+    if (!Rio_readlineb(&rio, buf, MAXLINE)) //rio에서 최대 MAXLINE만큼의 문자열을 읽어 buf에 저장
         return;
     printf("%s", buf);
-    sscanf(buf, "%s %s %s", method, uri, version);       //line:netp:doit:parserequest
-    if (strcasecmp(method, "GET")) {                     //line:netp:doit:beginrequesterr
+    sscanf(buf, "%s %s %s", method, uri, version);  //buf에서 method, uri, version 
+    if (strcasecmp(method, "GET")) {          //method가 GET이 아니면
         clienterror(fd, method, "501", "Not Implemented",
-                    "Tiny does not implement this method");
+                    "Tiny does not implement this method"); // 클라이언트한테 전송하고 함수 종료
         return;
     }                                                    //line:netp:doit:endrequesterr
-    read_requesthdrs(&rio);                              //line:netp:doit:readrequesthdrs
+    read_requesthdrs(&rio);    // rio를 통해 요청 헤더를 읽고 처리
 
     /* Parse URI from GET request */
-    is_static = parse_uri(uri, filename, cgiargs);       //line:netp:doit:staticcheck
-    if (stat(filename, &sbuf) < 0) {                     //line:netp:doit:beginnotfound
+    is_static = parse_uri(uri, filename, cgiargs);      
+    if (stat(filename, &sbuf) < 0) {                    //권한여부 확인
 	clienterror(fd, filename, "404", "Not found",
 		    "Tiny couldn't find this file");
 	return;
@@ -98,11 +98,11 @@ void doit(int fd)
 /* $begin read_requesthdrs */
 void read_requesthdrs(rio_t *rp) 
 {
-    char buf[MAXLINE];
+    char buf[MAXLINE]; 
 
-    Rio_readlineb(rp, buf, MAXLINE);
+    Rio_readlineb(rp, buf, MAXLINE); //rp에서 최대라인만큼 문자열을 읽어 buf에 저장
     printf("%s", buf);
-    while(strcmp(buf, "\r\n")) {          //line:netp:readhdrs:checkterm
+    while(strcmp(buf, "\r\n")) { //http요청 헤더의 끝이랑 buf랑 다르다면 계속해서 헤더를 읽고 출력반복
 	Rio_readlineb(rp, buf, MAXLINE);
 	printf("%s", buf);
     }
@@ -119,24 +119,24 @@ int parse_uri(char *uri, char *filename, char *cgiargs)
 {
     char *ptr;
 
-    if (!strstr(uri, "cgi-bin")) {  /* Static content */ //line:netp:parseuri:isstatic
-	strcpy(cgiargs, "");                             //line:netp:parseuri:clearcgi
-	strcpy(filename, ".");                           //line:netp:parseuri:beginconvert1
-	strcat(filename, uri);                           //line:netp:parseuri:endconvert1
-	if (uri[strlen(uri)-1] == '/')                   //line:netp:parseuri:slashcheck
-	    strcat(filename, "home.html");               //line:netp:parseuri:appenddefault
+    if (!strstr(uri, "cgi-bin")) {  /* Static content */ 
+	strcpy(cgiargs, "");                             
+	strcpy(filename, ".");      // .로 초기화        
+	strcat(filename, uri);      // uri를 이어 붙인다.
+	if (uri[strlen(uri)-1] == '/')                  
+	    strcat(filename, "home.html");  // 마지막 문자가 '/'면 home.html을 이어 붙인다.         
 	return 1;
     }
-    else {  /* Dynamic content */                        //line:netp:parseuri:isdynamic
-	ptr = index(uri, '?');                           //line:netp:parseuri:beginextract
-	if (ptr) {
-	    strcpy(cgiargs, ptr+1);
-	    *ptr = '\0';
+    else {  /* Dynamic content */                        
+	ptr = index(uri, '?');   // ?를 찾는다                 
+	if (ptr) {// 문자를 찾는다면
+	    strcpy(cgiargs, ptr+1);// cgiargs에 ptr 다음 문자부터 끝까지의 문자열을 복사한다.
+	    *ptr = '\0'; //ptr \0로 설정하여 uri문자열을 종료한다.
 	}
 	else 
-	    strcpy(cgiargs, "");                         //line:netp:parseuri:endextract
-	strcpy(filename, ".");                           //line:netp:parseuri:beginconvert2
-	strcat(filename, uri);                           //line:netp:parseuri:endconvert2
+	    strcpy(cgiargs, "");    // 빈문자로 초기화 해버림 
+	strcpy(filename, ".");                          
+	strcat(filename, uri);      // 이어 붙인다.     
 	return 0;
     }
 }
@@ -152,23 +152,26 @@ void serve_static(int fd, char *filename, int filesize)
     char *srcp, filetype[MAXLINE], buf[MAXBUF];
  
     /* Send response headers to client */
-    get_filetype(filename, filetype);       //line:netp:servestatic:getfiletype
-    sprintf(buf, "HTTP/1.0 200 OK\r\n");    //line:netp:servestatic:beginserve
-    sprintf(buf, "%sServer: Tiny Web Server\r\n", buf);
+    /*응답 라인과 헤더 작성*/
+    get_filetype(filename, filetype);      // 파일 타입 찾아오기
+    sprintf(buf, "HTTP/1.0 200 OK\r\n");    // 응답 라인 작성
+    sprintf(buf, "%sServer: Tiny Web Server\r\n", buf); // 응답 헤더 작성
     sprintf(buf, "%sConnection: close\r\n", buf);
     sprintf(buf, "%sContent-length: %d\r\n", buf, filesize);
     sprintf(buf, "%sContent-type: %s\r\n\r\n", buf, filetype);
-    Rio_writen(fd, buf, strlen(buf));       //line:netp:servestatic:endserve
-    printf("Response headers:\n");
-    printf("%s", buf);
+
+    /*응답 라인과 헤더를 클라이언트에게 보냄*/
+    Rio_writen(fd, buf, strlen(buf));       //connfd를 통해 clientfd에게 보냄
+    printf("Response headers:\n");   
+    printf("%s", buf); // 서버측에서도 출력한다.
 
     /* Send response body to client */
-    srcfd = Open(filename, O_RDONLY, 0);    //line:netp:servestatic:open
+    srcfd = Open(filename, O_RDONLY, 0);    //filename의 이름을 갖는 파일을 읽기 권한으로 불러온다.
     // srcp = Mmap(0, filesize, PROT_READ, MAP_PRIVATE, srcfd, 0);//line:netp:servestatic:mmap
-    srcp = (char *)Malloc(filesize);
-    Rio_readn(srcfd,srcp,filesize);
-    Close(srcfd);                           //line:netp:servestatic:close
-    Rio_writen(fd, srcp, filesize);         //line:netp:servestatic:write
+    srcp = (char *)Malloc(filesize); //파일 크기만큼의 메모리를 동적할당한다.
+    Rio_readn(srcfd,srcp,filesize); // filename 내용을 동적할당한 메모리에 쓴다.
+    Close(srcfd); //파일을 닫는다                           //line:netp:servestatic:close
+    Rio_writen(fd, srcp, filesize); // 해당 메모리에 있는 파일 내용들을 클라이언트에 보낸다.         //line:netp:servestatic:write
     // Munmap(srcp, filesize);                 //line:netp:servestatic:munmap
     free(srcp);
 }
