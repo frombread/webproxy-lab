@@ -164,10 +164,13 @@ void serve_static(int fd, char *filename, int filesize)
 
     /* Send response body to client */
     srcfd = Open(filename, O_RDONLY, 0);    //line:netp:servestatic:open
-    srcp = Mmap(0, filesize, PROT_READ, MAP_PRIVATE, srcfd, 0);//line:netp:servestatic:mmap
+    // srcp = Mmap(0, filesize, PROT_READ, MAP_PRIVATE, srcfd, 0);//line:netp:servestatic:mmap
+    srcp = (char *)Malloc(filesize);
+    Rio_readn(srcfd,srcp,filesize);
     Close(srcfd);                           //line:netp:servestatic:close
     Rio_writen(fd, srcp, filesize);         //line:netp:servestatic:write
-    Munmap(srcp, filesize);                 //line:netp:servestatic:munmap
+    // Munmap(srcp, filesize);                 //line:netp:servestatic:munmap
+    free(srcp);
 }
 
 /*
@@ -183,6 +186,8 @@ void get_filetype(char *filename, char *filetype)
 	strcpy(filetype, "image/png");
     else if (strstr(filename, ".jpg"))
 	strcpy(filetype, "image/jpeg");
+    else if (strstr(filename,".mpeg"))
+    strcpy(filetype,"video/MPG");
     else
 	strcpy(filetype, "text/plain");
 }  
