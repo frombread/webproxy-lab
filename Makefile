@@ -8,16 +8,16 @@ CC = gcc
 CFLAGS = -g -Wall
 LDFLAGS = -lpthread
 
-all: proxy client
+all: proxy #client
 
 csapp.o: csapp.c csapp.h
 	$(CC) $(CFLAGS) -c csapp.c
 
-client.o: client.c csapp.h
-	$(CC) $(CFLAGS) -c client.c
+# client.o: client.c csapp.h
+# 	$(CC) $(CFLAGS) -c client.c
 
-client: client.o csapp.o
-	$(CC) $(CFLAGS) client.o csapp.o -o client 
+# client: client.o csapp.o
+# 	$(CC) $(CFLAGS) client.o csapp.o -o client 
 
 proxy.o: proxy.c csapp.h
 	$(CC) $(CFLAGS) -c proxy.c
